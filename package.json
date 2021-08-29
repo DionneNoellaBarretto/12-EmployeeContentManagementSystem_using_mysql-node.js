@@ -1,0 +1,28 @@
+{
+  "name": "package.json",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "Dionne Noella Barretto",
+  "license": "",
+  "description": "A command-line application from scratch to manage a company's employee database, using Node.js, Inquirer, and MySQL.",
+  "dependencies": {
+    "mysql2": "^2.1.0",
+    "chalk": "^4.1.1",
+    "console.table": "^0.10.0",
+    "inquirer": "^8.1.0",
+    "dotenv": "^10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DionneNoellaBarretto/12-EmployeeContentManagementSystem_using_mysql-node.js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DionneNoellaBarretto/12-EmployeeContentManagementSystem_using_mysql-node.js/issues"
+  },
+  "homepage": "https://dionnenoellabarretto.github.io/12-EmployeeContentManagementSystem_using_mysql-node.js/"
+}
