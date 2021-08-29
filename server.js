@@ -1,10 +1,11 @@
 // Node Module / Global Variable & Dependency Declaration
 const mysql = require('mysql2'); // https://www.npmjs.com/package/mysql2
 const inquirer = require('inquirer');
-const cTable = require('console.table');
 const chalk = require('chalk');
 require('dotenv').config();
+require('console.table');
 const {menuQ, departmentQ, roleQ, employeeRole, employeeRole2, employeeQ, removeEPrompts, removeDPrompts} = require('./inquirer');
+
 
 //Providing credentials to the SQL database
 const connection = mysql.createConnection({
