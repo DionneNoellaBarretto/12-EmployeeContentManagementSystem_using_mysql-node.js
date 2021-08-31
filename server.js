@@ -387,6 +387,6 @@ connection.connect((error) => {
     }
 })
 
-// SELECT SUM(salary) AS "Total Salary" FROM employees; 👉View employees by department
+// SELECT SUM(salary) AS "Total Salary" FROM role; 👉View the total utilized budget of a department;in other words, the combined salaries of all employees in that department (role)
 // SELECT * FROM employee WHERE manager_id IS NOT NULL; 👉View employees by manager
-// SELECT * FROM employee JOIN department ON department.id = employee.role_id WHERE role_id IS NOT NULL; 👉View the total utilized budget of a department;in other words, the combined salaries of all employees in that department
+// SELECT * FROM employee JOIN department ON department.id = employee.role_id WHERE role_id IS NOT NULL; 👉View employees by department 
