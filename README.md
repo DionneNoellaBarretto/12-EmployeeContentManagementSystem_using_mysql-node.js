@@ -60,7 +60,8 @@ Try to add some additional functionality to your application, such as the abilit
 DB Schema Mapping: 
 ![DB Schema Mapping](./Assets/12-sql-homework-demo-01.png)
 
-File Structure / Update .env File: 
+File Structure / Update .env File:
+
 ![File Structure / Update .env File](./Assets/UpdateFile,FileStructure.png)
 
 Initialize Web App through Command Line Interface: 
