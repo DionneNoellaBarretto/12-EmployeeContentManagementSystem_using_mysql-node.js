@@ -10,28 +10,29 @@ const validateInput = (input) => {
 }
 
 // Menu choices
-const menuQ = [ 
+const options = [ 
     { 
         name: 'choice',
         message: 'What would you like to do?',
         type: 'list',
         choices: [ 
-            "Add Department",
-            "Add Role",
-            "Add Employee",
+            "Add a Department",
+            "Add a Role",
+            "Add an Employee",
             "View All Employees", 
             "View All Roles", 
             "View All Departments", 
-            "Update Employee Role",
-            "Remove Employee",
-            "Remove Department",
+            "Update Employee's Role",
+            "Remove an Employee",
+            "Remove a Department",
+            "Remove a Role",
             "Exit"
         ]   
     }
 ]
 
 // Prompts for adding new department
-const departmentQ = [
+const department = [
     {
         name: 'id', 
         message: 'What do you want the ID of the department to be?',
@@ -47,7 +48,7 @@ const departmentQ = [
 ]
 
 // Prompts for adding new role
-const roleQ = [
+const role = [
     {
         name: 'id', 
         message: 'What do you want the ID of the role to be?',
@@ -75,7 +76,7 @@ const roleQ = [
 ]
 
 // Prompts for adding new employee
-const employeeQ = [
+const employee = [
     {
         name: 'name', 
         message: 'What is the first name of the employee?',
@@ -88,21 +89,21 @@ const employeeQ = [
         type: 'input',
         validate: validateInput
     },
-    {
-        name: 'role',
-        message: "What is the employee's role? Choose a valid role from the database.",
-        type: 'input',
-        validate: validateInput
-    },
-    { 
-        name: 'choice',
-        message: 'Does the employee have a manager',
-        type: 'list',
-        choices: [ 
-            "Yes",
-            "No",
-        ]   
-    },
+    // {
+    //     name: 'role',
+    //     message: "What is the employee's role? Choose a valid role from the database.",
+    //     type: 'input',
+    //     validate: validateInput
+    // },
+    // { 
+    //     name: 'choice',
+    //     message: 'Does the employee have a manager',
+    //     type: 'list',
+    //     choices: [ 
+    //         "Yes",
+    //         "No",
+    //     ]   
+    // },
     {
         name: 'manager',
         message: "Who is the employee's manager? Choose a valid employee from the database.",
@@ -112,7 +113,7 @@ const employeeQ = [
 ]
 
 // Prompts for updating employee role
-const employeeRole = [
+const employeeName = [
     {
         name: 'name', 
         message: 'Which employee did you want to update?',
@@ -121,17 +122,17 @@ const employeeRole = [
     }
 ]
 
-const employeeRole2 = [
+const employeeRole = [
     {
     name: 'role', 
-    message: 'What is the name of the role you want to update for the employee? Choose a valid role from the database?',
+    message: 'What is the name of the new role you want to assign for this employee? Choose a valid role from the database',
     type: 'input',
     validate: validateInput
     }
 ]
 
 // Prompts for removing employees
-const removeEPrompts = [
+const removeEmp = [
     {
     name: 'name', 
     message: 'What is the name of the employee you want to remove?',
@@ -141,7 +142,7 @@ const removeEPrompts = [
 ]
 
 // Prompts for removing department
-const removeDPrompts = [
+const removeDept = [
     {
     name: 'name', 
     message: 'What is the name of the department you want to remove?',
@@ -150,6 +151,16 @@ const removeDPrompts = [
     }
 ]
 
+// Prompts for removing department
+const removeRole = [
+    {
+    name: 'name', 
+    message: 'What is the name of the role you want to remove?',
+    type: 'input',
+    validate: validateInput
+    }
+]
 
-module.exports = {menuQ, departmentQ, roleQ, employeeRole, employeeRole2, removeEPrompts, 
-employeeQ, removeDPrompts}
+
+module.exports = {options, department, role, employee,employeeName, employeeRole, removeEmp,  removeRole,
+ removeDept}

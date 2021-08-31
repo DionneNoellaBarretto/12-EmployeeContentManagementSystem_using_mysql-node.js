@@ -1,12 +1,12 @@
 -- Prepopulating database with example data for starters..
 DELETE FROM department;
-INSERT INTO department (id, name)
-VALUES (1,"Accounting"),
-       (3,"Marketing"),
-       (5,"Human Resources"),
-       (2,"Customer Support"),
-       (4,"Engineering"),
-       (6,"Sales");
+INSERT INTO department (name)
+VALUES ("Accounting"),
+       ("Marketing"),
+       ("Human Resources"),
+       ("Customer Support"),
+       ("Engineering"),
+       ("Sales");
 DELETE FROM role;
 INSERT INTO role (id, title, salary, department_id)
 VALUES 
@@ -26,7 +26,7 @@ DELETE FROM employee;
 DELETE FROM employee;
 INSERT INTO employee (id, first_name, last_name, role_id, manager_id)
 VALUES
-    (1, "Dionn Noella", "Barretto", 2, 1),
+    (1, "Dionne Noella", "Barretto", 2, 1),
 	(2, "Ash", "R", 1, 2),
     (3, "Sun", "R", 4, NULL),
     (4, "San", "R", 5, 3),
