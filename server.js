@@ -86,7 +86,8 @@ class Application {
             if (error) {
                 throw error;
             } else {
-                console.log(chalk.black.bgCyan("\nHere are all of the current departments.\n")); // Displays all departments
+                // https://www.npmjs.com/package/chalk
+                console.log(chalk.white.bgMagenta("\n Following are existing department names in the database:\n")); // Displays all departments
                 console.table(results);
                 for (let i = 0 ; i < results.length ; i++) {
                     d.push(results[i].name);
@@ -104,7 +105,7 @@ class Application {
                                     if (error) {
                                         throw error;
                                     } else {
-                                        console.log(chalk.black.bgCyan(`\nAdded ${this.capEachWord(answers.title)} to roles!\n`));
+                                        console.log(chalk.black.bgCyan(`\n\ ${this.capEachWord(answers.title)} role was successfully added!\n`));
                                         console.table(results);
                                         this.begin();
                                     }
@@ -112,7 +113,7 @@ class Application {
                             }
                         })
                     } else { // If the array doesn't have the department the user input, the user will be redirected to the menu
-                        console.log(chalk.red("\nThere aren't any departments with this name. I'll take you back to the menu.\n"));
+                        console.log(chalk.white,bgRed("\n Error! no such department exists! Rerouting you to the main menu\n"));
                         this.begin();
                     }
                 })
@@ -139,7 +140,7 @@ class Application {
                             if (error) {
                                 throw error;
                             } else {
-                                console.log(chalk.black.bgCyan(`\nAdded ${this.capEachWord(answers.name)} to the database!\n`));
+                                console.log(chalk.black.bgCyan(`\n Employee by the name of ${this.capEachWord(answers.name)} ${this.capEachWord(answers.name2)} was successfully added to the database!\n`));
                                 console.table(results);
                                 this.begin();
                             }
@@ -152,7 +153,7 @@ class Application {
                             if (error) {
                                 throw error;
                             } else {
-                                console.log(chalk.black.bgCyan(`\nAdded ${this.capEachWord(answers.name)} ${this.capEachWord(answers.name2)} to the database!\n`));
+                                console.log(chalk.black.bgCyan(`\n${this.capEachWord(answers.name)} ${this.capEachWord(answers.name2)} was added as an employee to the database successfully!\n`));
                                 console.table(results);
                                 this.begin();
                             }
@@ -160,7 +161,7 @@ class Application {
 
                     // If the values are not found in the database
                     } else {
-                        console.log(chalk.red("\nWe couldn't find those values in the database.\n"));
+                        console.log(chalk.red("\n Oops! No such record found in the database! Rerouting you to the main menu.\n"));
                         this.begin();
                     }
                 }
@@ -203,7 +204,7 @@ class Application {
             if (error) {
                 throw error;
             } else {
-                console.log(chalk.black.bgCyan("\nHere are all of the current employees.\n"));
+                console.log(chalk.black.bgCyan("\n Current list of employees in DNB Org include:\n"));
                 for (let i = 0 ; i < results.length ; i++) { // Concat and displays all first and last names of employees from db
                     console.log(results[i].first_name.concat(` ${results[i].last_name}`));
                     e.push(results[i].first_name.concat(` ${results[i].last_name}`));
@@ -211,7 +212,7 @@ class Application {
                 inquirer.prompt(employeeName).then(answers => { // Asks the user for employee name
                     if (e.includes(this.capEachWord(answers.name))) { // If the name the user input exists in the array, the script will continue to update role
                         name = answers.name;
-                        console.log(chalk.black.bgCyan("\nHere are all of the current roles.\n"));
+                        console.log(chalk.black.bgCyan("\nCurrent Roles include:\n"));
                         let q = "SELECT title from role";
                         connection.query(q, (error, results) => {
                             if (error) {
@@ -236,7 +237,7 @@ class Application {
                                                     if (error) {
                                                         throw error;
                                                     } else {
-                                                        console.log(chalk.black.bgCyan(`\nUpdated role for ${this.capEachWord(name)}!\n`));
+                                                        console.log(chalk.black.bgCyan(`\n ${this.capEachWord(name)}'s role has been updated successfully!\n`));
                                                         console.table(results);
                                                         this.begin();
                                                     }
@@ -244,14 +245,14 @@ class Application {
                                             }
                                         })
                                     } else { // If the role is not found
-                                        console.log(chalk.red("\nRole not found in the database. I'll take you back to the menu.\n")); 
+                                        console.log(chalk.red("\n Yikes!! No such role fount in the database. Rerouting you to the main menu.\n")); 
                                         this.begin();
                                     } 
                                 })
                             }
                         })
                     } else { // If the name was not found in the array, the user will be redirected to the menu
-                        console.log(chalk.red("\nEmployee not found. I'll take you back to the menu.\n"));
+                        console.log(chalk.red("\n Oops! Employee not found. Rerouting you to the main menu.\n"));
                         this.begin();
                     }
                 })
@@ -277,13 +278,13 @@ class Application {
                             if (error) {
                                 throw error;
                             } else {
-                                console.log(chalk.black.bgCyan(`\nRemoved ${this.capEachWord(answers.name)} from the database!\n`));
+                                console.log(chalk.black.bgCyan(`\n Removed employee ${this.capEachWord(answers.name)} from the database successfully!\n`));
                                 console.table(results);
                                 this.begin();
                             }
                         })
                     } else {
-                        console.log(chalk.red("\nName is not valid. I'll take you back to the menu.\n"));
+                        console.log(chalk.red("\n Invalid employee name! Rerouting you to the main menu.\n"));
                         this.begin();
                     }
                 }
@@ -308,13 +309,13 @@ class Application {
                         if (error) {
                             throw error;
                         } else {
-                            console.log(chalk.black.bgCyan(`\nRemoved ${this.capEachWord(answers.name)} from the database!\n`));
+                            console.log(chalk.black.bgCyan(`\n Removed ${this.capEachWord(answers.name)} department from the database!\n`));
                             console.table(results);
                             this.begin();
                         }
                     })
                 } else {
-                    console.log(chalk.red("\nName is not valid. I'll take you back to the menu.\n")); // If the department is not found
+                    console.log(chalk.red("\n Dept Name is invalid. Rerouting you to the main menu.\n")); // If the department is not found
                     this.begin();
                 }
                 })
@@ -339,13 +340,13 @@ class Application {
                         if (error) {
                             throw error;
                         } else {
-                            console.log(chalk.black.bgCyan(`\nRemoved ${this.capEachWord(answers.title)} from the database!\n`));
+                            console.log(chalk.black.bgCyan(`\n Successfully removed ${this.capEachWord(answers.title)} role from the database!\n`));
                             console.table(results);
                             this.begin();
                         }
                     })
                 } else {
-                    console.log(chalk.red("\nName is not valid. I'll take you back to the menu.\n")); // If the role is not found
+                    console.log(chalk.red("\n Role Name does not exist. Rerouting you to the main menu.\n")); // If the role is not found
                     this.begin();
                 }
                 })
@@ -380,7 +381,7 @@ connection.connect((error) => {
     if(error) {
         throw error;
     } else {
-        console.log(chalk.black.bgCyan("\n Welcome to DNB's Employee Content Management System!\n"));
+        console.log(chalk.black.bgCyan("\n Welcome to DNB Org's Employee Content Management System!\n"));
         const newApp = new Application;
         newApp.begin();
     }

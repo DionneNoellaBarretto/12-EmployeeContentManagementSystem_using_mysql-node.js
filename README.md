@@ -57,7 +57,20 @@ Try to add some additional functionality to your application, such as the abilit
 
 ![Gif Demo](./supplemental/TeamProfileGenerator_jest,npm,node.js,oop.gif)
 
+DB Schema Mapping: 
+![DB Schema Mapping](./Assets/12-sql-homework-demo-01.png)
 
+File Structure / Update .env File: 
+![File Structure / Update .env File](./Assets/UpdateFile,FileStructure.png)
+
+Initialize Web App through Command Line Interface: 
+![Initialize Web App through Command Line Interface](./Assets/InitializeWebAppthroughcmdln.png)
+
+Viewing Options: 
+![All Viewing Options](./Assets/ViewOptions.png)
+
+Department Table seed file doesn't show "Board" that was manually added by the user: 
+![Department Table](./Assets/DepartmentTable.png)
 
 ## Grading Requirements
 
@@ -67,7 +80,7 @@ This homework is graded based on the following criteria:
 ```
  ✅ Your GitHub repository containing your application code.
 ```
-### Walkthrough Video: 27%
+### Walk through Video: 27%
 ```
 ✅ A walk through video that demonstrates the functionality of the employee tracker must be submitted, and a link to the video should be included in your README file.
 ✅ The walk through video must show all of the technical acceptance criteria being met.
