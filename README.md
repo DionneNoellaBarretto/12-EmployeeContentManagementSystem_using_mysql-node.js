@@ -54,7 +54,7 @@ Try to add some additional functionality to your application, such as the abilit
 
 ## Mock-Up
 
-[Video Link - Demonstration](https://drive.google.com/file/d/1hmCsqMy5L583B2Y2qswqoCN_mlVkbkLr/view) | [Bonus Exercise Video](https://drive.google.com/file/d/1VR3N3GaZWshDKILkHMVIvGCV5EM3bRNm/view)
+[Video Link - Demonstration](https://drive.google.com/file/d/1Uh4gnhaJu52bZGt9QHCibVasnHWcKzmn/view?usp=sharing) | [Bonus Exercise Video](https://drive.google.com/file/d/1VR3N3GaZWshDKILkHMVIvGCV5EM3bRNm/view)
 
 ![Gif Demo](./Assets/EmployeeContentManagementSystem_using_mysql-node.js.gif)
 
