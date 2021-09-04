@@ -1,392 +1,1025 @@
-// Node Module / Global Variable & Dependency Declaration
+// Global Variable Declaration
+let managers = [];
+let roles = [];
+let departments = [];
+let empIDs = [];
+let empFN = [];
+let managerID = [];
+let roleID = [];
+// Node Module / Dependency Declaration
 const mysql = require('mysql2'); // https://www.npmjs.com/package/mysql2
 const inquirer = require('inquirer');
-const chalk = require('chalk');
+const chalk = require('chalk'); //for colorful console.log messages
 require('dotenv').config();
 require('console.table');
-const {options, department, role, employee,employeeName, employeeRole, removeEmp, removeDept, removeRole} = require('./inquirer');
+require('./index');
 
-
-//Providing credentials to the SQL database
+// inline db connection.. could have put this in a separate config folder/file as well
 const connection = mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME
-})
+	host: 'localhost',
+	port: 3306,
+	user: 'root',
+	password: 'mysql123',
+	database: 'dnb_empDB',
+});
 
-// This class will control the flow of the application
-class Application {
-    begin() { // Show the menu prompt
-        inquirer.prompt(options).then(answers => {
-            this.pick(answers.choice);
-        }).catch(error => {
-            if (error.isTtyError) {
-                console.log("ERROR! Invalid Prompt!");
-            } else {
-                console.log("Oops, Something went wrong!");
-            }
-        })
-    }
-    pick (choice) { // Will redirect the menu based on user input
-        switch (choice) {
-            case 'Add a Department':
-                this.addDept();
-                break;
-            case 'Add a Role':
-                this.addRole();
-                break;
-            case 'Add an Employee':
-                this.addEmployee();
-                break;
-            case 'View All Employees':
-                this.viewAllEmployees();
-                break;
-            case 'View All Roles':
-                this.viewAllRolesDepts(choice);
-                break;
-            case 'View All Departments':
-                this.viewAllRolesDepts(choice);
-                break;
-            case 'Update an Employee Role':
-                this.updateRole();
-                break;
-            case 'Remove a Employee':
-                this.removeEmployee();
-                break;
-            case 'Remove a Department':
-                this.removeDept();
-                break;
-            case 'Remove a Role':
-                this.removeRole();
-                break;
-            default: 
-                console.log(chalk.black.bgCyan("\nByeee! You have successfully exited DNB's Employee Content Management System!!\n"));
-                connection.end();
-            }
-    }
-    addDept() { // Adds new department into database
-        inquirer.prompt(department).then(answers => {
-            const q = "INSERT INTO department SET ?";
-            connection.query(q, {id: answers.id, name: this.capEachWord(answers.name)}, (error, results) => {
-                if (error) {
-                    throw error;
-                } else {
-                    console.log(chalk.black.bgCyan(`\nAdded department: ${answers.id} | ${this.capEachWord(answers.name)}\n`));
-                    console.table(results);
-                    this.begin();
-                }
-            })
-        }) 
-    }
-    addRole() { // Adds new role to database
-        const q = "SELECT name from department";
-        let d = []; // Array that will hold all department names
-        connection.query(q, (error, results) => {
-            if (error) {
-                throw error;
-            } else {
-                // https://www.npmjs.com/package/chalk
-                console.log(chalk.white.bgMagenta("\n Following are existing department names in the database:\n")); // Displays all departments
-                console.table(results);
-                for (let i = 0 ; i < results.length ; i++) {
-                    d.push(results[i].name);
-                }
-                inquirer.prompt(role).then(answers => { // If the array has the department the user input, the script will continue the query
-                    if(d.includes(this.capEachWord(answers.dep))) {
-                        let q1 = "SELECT id from department WHERE name = ?"
-                        connection.query(q1, answers.dep, (error, results) => { // Query that grabs the ID number of the department the user inputted
-                            if (error) {
-                                throw error;
-                            } else {
-                                let deptID = results[0].id;
-                                let q2 = "INSERT INTO role SET ?"; // Adding new row to the role table with user input
-                                connection.query(q2, [{id: answers.id, title: this.capEachWord(answers.title), salary: answers.salary, department_id: deptID}], (error, results) => {
-                                    if (error) {
-                                        throw error;
-                                    } else {
-                                        console.log(chalk.black.bgCyan(`\n\ ${this.capEachWord(answers.title)} role was successfully added!\n`));
-                                        console.table(results);
-                                        this.begin();
-                                    }
-                                })
-                            }
-                        })
-                    } else { // If the array doesn't have the department the user input, the user will be redirected to the menu
-                        console.log(chalk.white,bgRed("\n Error! no such department exists! Rerouting you to the main menu\n"));
-                        this.begin();
-                    }
-                })
-            }
-        })
-    }
-    addEmployee() { // Adds new employee
-        let e = []; // Will hold employee names
-        let r = []; // Will hold roles
-        inquirer.prompt(employee).then(answers => { // Prompts the user data about new employee
-            const q = "SELECT employee.first_name, employee.last_name, role.title, role.id as r_id, employee.id as e_id FROM employee INNER JOIN role ON role.id = employee.role_id;"; 
-            connection.query(q, (error, results) => {
-                if (error) {
-                    throw error;
-                } else {
-                    for (let i = 0 ; i < results.length ; i++) { // Loop through results and save employee names/roles in arrays
-                        e.push(results[i].first_name.concat(` ${results[i].last_name}`));
-                        r.push(results[i].title);
-                    } 
-                    // Validation before query to check if db includes the inputted manager name and role
-                    if (answers.manager && e.includes(this.capEachWord(answers.manager)) && (r.includes(this.capEachWord(answers.role)))) {
-                        const q = 'INSERT INTO employee SET ?'; // Query will add new employee to the database from user input (with manager)
-                        connection.query(q, {first_name: this.capEachWord(answers.name), last_name: this.capEachWord(answers.name2), role_id: this.findRoleID(answers.role, results), manager_id: this.findManagerID(answers.manager, results)}, (error, results) => {
-                            if (error) {
-                                throw error;
-                            } else {
-                                console.log(chalk.black.bgCyan(`\n Employee by the name of ${this.capEachWord(answers.name)} ${this.capEachWord(answers.name2)} was successfully added to the database!\n`));
-                                console.table(results);
-                                this.begin();
-                            }
-                        })
 
-                    // Validation before query to check if db includes the inputted role
-                    } else if (!answers.manager && (r.includes(this.capEachWord(answers.role)))) {
-                        const q = 'INSERT INTO employee SET ?'; // Query will add new employee to the database from user input (without manager)
-                        connection.query(q, {first_name: this.capEachWord(answers.name), last_name: this.capEachWord(answers.name2), role_id: this.findRoleID(answers.role, results)}, (error, results) => {
-                            if (error) {
-                                throw error;
-                            } else {
-                                console.log(chalk.black.bgCyan(`\n${this.capEachWord(answers.name)} ${this.capEachWord(answers.name2)} was added as an employee to the database successfully!\n`));
-                                console.table(results);
-                                this.begin();
-                            }
-                        })
+//*Starter Menu Qns presented by inquirer
+const menuOptions = [
+	{
+		type: 'list',
+		message: 'Using your up/down arrow key select an operation to perform',
+		name: 'choices',
+		choices: [
+			'Add Employee',
+            'Add Role',
+			'Add Department',
+			'Remove Employee',
+			'Remove Role',
+			'Remove Department',
+            'Update Employee Role',
+			'Update Employee Manager',
+            'View All Employees',
+            'View All Roles',
+            'View All Departments',
+            'View All Employees By Manager',
+			'View All Employees By Department',
+            'View Total Utilized Budget by Department',
+			'Exit',
+		],
+	},
+];
 
-                    // If the values are not found in the database
-                    } else {
-                        console.log(chalk.red("\n Oops! No such record found in the database! Rerouting you to the main menu.\n"));
-                        this.begin();
-                    }
-                }
-            })
-        })
-    }
-    viewAllEmployees() { // Query to view all employees
-        const q = "SELECT employee.id, employee.first_name, employee.last_name, role.title, role.salary, department.name as department, CONCAT(manager.first_name, ' ', manager.last_name) AS manager FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id LEFT JOIN employee manager on manager.id = employee.manager_id";
-        connection.query(q, (error, results) => {
-            if (error) {
-                throw error;
-            } else {
-                console.table(results);
-                this.begin();
-            }
-        })
-    }
-    viewAllRolesDepts(choice) { // Query to view all roles or all departments
-        let q;
-        if (choice === "View All Roles") {
-            q = "SELECT * FROM role";
-        } else if (choice === "View All Departments") {
-            q = "SELECT * FROM department";
-        }
-        connection.query(q, (error, results) => {
-            if (error) {
-                throw error;
-            } else {
-                console.table(results);
-                this.begin();
-            }
-        })
-    }
-    updateRole() { // Updates employee role 
-        const q = "SELECT first_name, last_name from employee";
-        let e = []; // Holds employee names
-        let r = []; // Holds roles
-        let name; // Holds the employee name
-        connection.query(q, (error, results) => {
-            if (error) {
-                throw error;
-            } else {
-                console.log(chalk.black.bgCyan("\n Current list of employees in DNB Org include:\n"));
-                for (let i = 0 ; i < results.length ; i++) { // Concat and displays all first and last names of employees from db
-                    console.log(results[i].first_name.concat(` ${results[i].last_name}`));
-                    e.push(results[i].first_name.concat(` ${results[i].last_name}`));
-                }
-                inquirer.prompt(employeeName).then(answers => { // Asks the user for employee name
-                    if (e.includes(this.capEachWord(answers.name))) { // If the name the user input exists in the array, the script will continue to update role
-                        name = answers.name;
-                        console.log(chalk.black.bgCyan("\nCurrent Roles include:\n"));
-                        let q = "SELECT title from role";
-                        connection.query(q, (error, results) => {
-                            if (error) {
-                                throw error;
-                            } else {
-                                console.table(results); // Displays all roles from db
-                                for (let i = 0 ; i < results.length ; i++) { 
-                                    let data2 = results[i].title;
-                                    r.push(data2);
-                                }
-                                inquirer.prompt(employeeRole).then(answers => { // Asks the user what role for the employee
-                                    if (r.includes(this.capEachWord(answers.role))) { // If the role is found in the db, the employee will be updated
-                                        let q2 = "SELECT id from role WHERE title = ?"; 
-                                        connection.query(q2, this.capEachWord(answers.role), (error, results) => { // Query will get the ID of the role from the db
-                                            if (error) {
-                                                throw error;
-                                            } else {
-                                                let roleID = results[0].id;
-                                                let [name1, name2] = name.split(" "); // Destructuring name to insert into query
-                                                let q = "UPDATE employee SET role_id = ? WHERE first_name = ? AND last_name = ?"
-                                                connection.query(q, [roleID, name1, name2], (error, results) => { // Query will update the new role for the employee
-                                                    if (error) {
-                                                        throw error;
-                                                    } else {
-                                                        console.log(chalk.black.bgCyan(`\n ${this.capEachWord(name)}'s role has been updated successfully!\n`));
-                                                        console.table(results);
-                                                        this.begin();
-                                                    }
-                                                })
-                                            }
-                                        })
-                                    } else { // If the role is not found
-                                        console.log(chalk.red("\n Yikes!! No such role fount in the database. Rerouting you to the main menu.\n")); 
-                                        this.begin();
-                                    } 
-                                })
-                            }
-                        })
-                    } else { // If the name was not found in the array, the user will be redirected to the menu
-                        console.log(chalk.red("\n Oops! Employee not found. Rerouting you to the main menu.\n"));
-                        this.begin();
-                    }
-                })
-            }
-        })
-    }
-    removeEmployee() { // Removes employee from db
-        let e = []; // Holds employee names
-        inquirer.prompt(removeEmp).then(answers => {
-            console.log(answers.name);
-            const q = "SELECT first_name, last_name FROM employee;";
-            connection.query(q, (error, results) => {
-                if (error) {
-                    throw error;
-                } else {
-                    for (let i = 0 ; i < results.length ; i++) {
-                        e.push(results[i].first_name.concat(` ${results[i].last_name}`));
-                    }
-                    if (e.includes(this.capEachWord(answers.name))) { // Checking if database has the name user input
-                        let [name1, name2] = answers.name.split(" "); // Destructuring name to insert into query
-                        const q1 = 'DELETE FROM employee WHERE first_name = ? AND last_name = ?';
-                        connection.query(q1, [name1, name2], (error, results) => { // Query to remove employee
-                            if (error) {
-                                throw error;
-                            } else {
-                                console.log(chalk.black.bgCyan(`\n Removed employee ${this.capEachWord(answers.name)} from the database successfully!\n`));
-                                console.table(results);
-                                this.begin();
-                            }
-                        })
-                    } else {
-                        console.log(chalk.red("\n Invalid employee name! Rerouting you to the main menu.\n"));
-                        this.begin();
-                    }
-                }
-            })
-        })
-    }
-    removeDept() { // Removes department from database
-        let d = []; // Holds departments
-        const q = "SELECT name from department"
-        connection.query(q, (error, results) => { 
-            if (error) {
-                throw error; 
-            } else {
-                for (let i = 0 ; i < results.length ; i++) { // Saves all departments into array 
-                    d.push(results[i].name);
-                }
-                
-                inquirer.prompt(removeDept).then(answers => {    // Checks if department user input is in db
-                if (d.includes(this.capEachWord(answers.name))) {
-                    const q1 = "DELETE FROM department WHERE name = ?";
-                    connection.query(q1, [this.capEachWord(answers.name)], (error, results) => { // Query will remove the department from the db
-                        if (error) {
-                            throw error;
-                        } else {
-                            console.log(chalk.black.bgCyan(`\n Removed ${this.capEachWord(answers.name)} department from the database!\n`));
-                            console.table(results);
-                            this.begin();
-                        }
-                    })
-                } else {
-                    console.log(chalk.red("\n Dept Name is invalid. Rerouting you to the main menu.\n")); // If the department is not found
-                    this.begin();
-                }
-                })
-            }
-        })
-    }
-    removeRole() { // Removes roles from database
-        let r = []; // Hold roles 
-        const q = "SELECT title from role"
-        connection.query(q, (error, results) => { 
-            if (error) {
-                throw error; 
-            } else {
-                for (let i = 0 ; i < results.length ; i++) { // Saves all roles into array 
-                    r.push(results[i].title);
-                }
-                
-                inquirer.prompt(removeRole).then(answers => {    // Checks if role user input is in db
-                if (r.includes(this.capEachWord(answers.title))) {
-                    const q1 = "DELETE FROM role WHERE title = ?";
-                    connection.query(q1, [this.capEachWord(answers.title)], (error, results) => { // Query will remove the role from the db
-                        if (error) {
-                            throw error;
-                        } else {
-                            console.log(chalk.black.bgCyan(`\n Successfully removed ${this.capEachWord(answers.title)} role from the database!\n`));
-                            console.table(results);
-                            this.begin();
-                        }
-                    })
-                } else {
-                    console.log(chalk.red("\n Role Name does not exist. Rerouting you to the main menu.\n")); // If the role is not found
-                    this.begin();
-                }
-                })
-            }
-        })
-    }
-    findRoleID(role, results) { // Finds the role ID associated with the role title
-        for (let i = 0 ; i < results.length ; i++) {
-            if (results[i].title === this.capEachWord(role)) {
-                return results[i].r_id;
-            } 
-        }
-    }
-    findManagerID(name, results) { // Finds the manager's id for employee if not null 
-        for (let i = 0 ; i < results.length ; i++) {
-            if (results[i].first_name + " " + results[i].last_name === this.capEachWord(name)) {
-                return results[i].e_id;
-            } 
-        }
-    }
-
-    capEachWord(str) { // Capitalizes every first letter in each word in a string + removes whitespace for consistency and compare values
-      return str.trim().split(" ").map(word => {
-        return word.substring(0,1).toUpperCase() + word.substring(1)
-      }).join(" ")
-    }
+//* function to start the program, prints app header and has intro inquirer prompt
+function begin() {
+    console.log(chalk.black.bgCyan("\n Welcome to DNB Org's Employee Content Management System!\n"));
+	inquirer.prompt(menuOptions).then(function (data) {
+		const Choice = data.choices;
+		if (Choice === 'View All Employees') {
+			viewAllEmps();
+		} else if (Choice === 'View All Departments') {
+			viewAllDepts();
+		} else if (Choice === 'View All Roles') {
+			viewAllRoles();
+		} else if (Choice === 'View All Employees By Department') {
+			viewAllEmpsByDept();
+		} else if (Choice === 'View All Employees By Manager') {
+			viewAllEmpsByMgr();
+		} else if (Choice === 'View Total Utilized Budget by Department') {
+			viewBudget();
+		} else if (Choice === 'Add Employee') {
+			addEmp();
+		} else if (Choice === 'Add Role') {
+			addRole();
+		} else if (Choice === 'Add Department') {
+			addDept();
+		} else if (Choice === 'Update Employee Role') {
+			updateEmpRole();
+		} else if (Choice === 'Update Employee Manager') {
+			updateEmpMgr();
+		} else if (Choice === 'Remove Employee') {
+			removeEmp();
+		} else if (Choice === 'Remove Role') {
+			removeRole();
+		} else if (Choice === 'Remove Department') {
+			removeDept();
+		} else {
+			exit();
+		}
+	});
 }
 
 
-// Connecting to the database and initializing new Application class that will begin the app
-connection.connect((error) => {
-    if(error) {
-        throw error;
-    } else {
-        console.log(chalk.black.bgCyan("\n Welcome to DNB Org's Employee Content Management System!\n"));
-        const newApp = new Application;
-        newApp.begin();
-    }
-})
+function reRun() {
+	inquirer
+		.prompt({
+			name: 'rerun',
+			type: 'list',
+			message: 'Want to return to the Main Menu or Exit?',
+			choices: ['Return To Main Menu', 'Exit'],
+		})
+		.then(function (data) {
+			const reRunQ = data.rerun;
+			if (reRunQ === 'Return To Main Menu') {
+				begin();
+			} else {
+				exit();
+			}
+		});
+}
 
-// SELECT SUM(salary) AS "Total Salary" FROM role; 👉View the total utilized budget of a department;in other words, the combined salaries of all employees in that department (role)
-// SELECT * FROM employee WHERE manager_id IS NOT NULL; 👉View employees by manager
-// SELECT * FROM employee JOIN department ON department.id = employee.role_id WHERE role_id IS NOT NULL; 👉View employees by department 
+//* Builds array for Manager Names
+function createManagers() {
+	const query = `
+    SELECT DISTINCT x.id, CONCAT(x.first_name, " ", x.last_name) 
+    AS manager_name 
+    FROM employee e 
+    INNER JOIN employee x 
+    ON e.manager_id = x.id`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			managers.push(res[i].manager_name);
+		}
+		managers.push('null'); //Adds Null At the end of the array since not all new employees have managers
+	});
+}
+
+//* Builds array for Job Title Names
+function createRoles() {
+	const query = `
+    SELECT id, title 
+    FROM role;`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			roles.push(res[i].title);
+		}
+	});
+}
+
+//* Builds array for Job Title Names
+function createDepts() {
+	const query = `
+    SELECT id, name 
+    FROM department;`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			departments.push(res[i].name);
+		}
+	});
+}
+
+function createEmpID() {
+	const query = `
+    SELECT id
+    FROM employee;`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			empIDs.push(res[i].id);
+		}
+	});
+}
+
+function createEmpFN() {
+	const query = `
+    SELECT first_name
+    FROM employee;`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			empFN.push(res[i].first_name);
+		}
+	});
+}
+
+function ManagerWithID() {
+	const query = `
+    SELECT DISTINCT CONCAT(x.first_name, " ", x.last_name) AS manager_name, x.id AS manager_id 
+    FROM employee e
+    LEFT JOIN employee x
+    ON e.manager_id = x.id`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			managerID.push(res[i]);
+		}
+
+	});
+}
+
+function RoleWithID() {
+	const query = `
+    SELECT id, title 
+    FROM role;`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			roleID.push(res[i]);
+		}
+	});
+}
+
+//* Function to view everything in DB
+function viewAllEmps() {
+	//
+	const query = `
+    SELECT e.id AS employee_id, e.first_name, e.last_name, d.name AS department_name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name 
+    FROM employee e
+    LEFT JOIN role r
+    ON e.role_id = r.id
+    LEFT JOIN department d
+    ON d.id = r.department_id
+    LEFT JOIN employee x
+    ON e.manager_id = x.id`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		//Adds space between the console table
+		console.log(`
+		
+		`);
+		console.table(res);
+
+		reRun();
+	});
+}
+
+function viewAllEmpsByDept() {
+	//
+	const query = 'SELECT name FROM department';
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		inquirer
+			.prompt({
+				name: 'deptChoice',
+				type: 'list',
+				message: 'Choose a Department of whose  Employees you would like to view: ',
+				choices: departments,
+			})
+			.then(function (answer) {
+				const query2 = `
+                    SELECT e.id AS employee_id, e.first_name, e.last_name, d.name AS department_name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name 
+                    FROM employee e
+                    LEFT JOIN role r
+                    ON e.role_id = r.id
+                    LEFT JOIN department d
+                    ON d.id = r.department_id
+                    LEFT JOIN employee x
+                    ON e.manager_id = x.id
+                    WHERE name = ?`;
+				connection.query(query2, [answer.deptChoice], function (err, res) {
+					if (err) throw err;
+					//Adds space between the console table
+					console.log(`
+		
+					`);
+					console.table(res);
+					reRun();
+				});
+			});
+	});
+}
+
+//* View All Employees By Manager
+
+function viewAllEmpsByMgr() {
+	//
+	const query = `
+    SELECT DISTINCT CONCAT(x.first_name, " ", x.last_name) AS manager_name 
+    FROM employee e
+    INNER JOIN employee x
+    ON e.manager_id = x.id
+    `;
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		inquirer
+			.prompt({
+				name: 'managerChoices',
+				type: 'list',
+				message: 'Choose a Manager whose Employees you would like to view',
+				choices: managers,
+			})
+			.then(function (answer) {
+				const query2 = `
+                    SELECT e.id AS employee_id, e.first_name, e.last_name, d.name AS department_name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name 
+                    FROM employee e
+                    LEFT JOIN role r
+                    ON e.role_id = r.id
+                    LEFT JOIN department d
+                    ON d.id = r.department_id
+                    LEFT JOIN employee x
+                    ON e.manager_id = x.id
+                    HAVING manager_name = ?`;
+				connection.query(query2, [answer.managerChoices], function (err, res) {
+					if (err) throw err;
+					//Adds space between the console table
+					console.log(`
+		
+					`);
+					console.table(res);
+					reRun();
+				});
+			});
+	});
+}
+
+//* Add Employee
+function addEmp() {
+	//
+	inquirer
+		.prompt([
+			{
+				name: 'first_name',
+				type: 'input',
+				message: 'Enter a valid First Name for the new Employee:',
+				validate: function (valLet) {
+					letters = /^[A-Za-z]+$/.test(valLet);
+					if (letters) {
+						return true;
+					} else {
+						console.log(
+							chalk.redBright(`Invalid Submission. Please Choose a valid letter from A-Z or a-z! You may delete your invalid submission and resubmit a new entry!`)
+						);
+						return false;
+					}
+				},
+			},
+			{
+				name: 'last_name',
+				type: 'input',
+				message: 'Enter a valid Last Name for the new Employee:',
+				validate: function (valLet) {
+					letters = /^[A-Za-z]+$/.test(valLet);
+					if (letters) {
+						return true;
+					} else {
+						console.log(
+							chalk.redBright(`Invalid Submission. Please Choose a valid letter from A-Z or a-z! You may delete your invalid submission and resubmit a new entry!`)
+						);
+						return false;
+					}
+				},
+			},
+			{
+				name: 'role',
+				type: 'list',
+				message: 'Enter a valid role/job title for the new Employee from the existing list of entries:',
+				choices: roles,
+			},
+			{
+				name: 'manager',
+				type: 'list',
+				message: 'Enter a Manager for the new Employee from the existing list of entries:',
+				choices: managers,
+			},
+		])
+		.then(function (answer) {
+
+			let employeeFirstName = answer.first_name;
+			let employeeLastName = answer.last_name;
+
+			//*Loop through Role Array to find matching id
+			function FindRoleID() {
+				for (let p = 0; p < roleID.length; p++) {
+					if (roleID[p].title === answer.role) {
+						return roleID[p].id;
+					}
+				}
+			}
+			//*Loop through Manager Array to find matching id
+			function FindManagerID() {
+				for (let q = 0; q < managerID.length; q++) {
+					if (managerID[q].manager_name === answer.manager) {
+						return managerID[q].manager_id;
+					}
+				}
+			}
+			let employeeRole = FindRoleID();
+			let employeeManager = FindManagerID();
+
+			console.log(
+				chalk.greenBright(`
+			-------------------------------------------------------------------------------------------------
+			Successfully added New Employee -  ${employeeFirstName} ${employeeLastName} to Database!
+			-------------------------------------------------------------------------------------------------
+			`)
+			);
+			let addnewEmployee = new employee(employeeFirstName, employeeLastName, employeeRole, employeeManager);
+			connection.query('INSERT INTO employee SET ?', addnewEmployee, function (err, res) {
+				if (err) throw err;
+			});
+			reRun();
+		});
+}
+
+//*Remove Employee
+function removeEmp() {
+	inquirer
+		.prompt([
+			{
+				name: 'first_name',
+				type: 'list',
+				message: 'Enter the First Name of the Employee you want to remove:',
+				choices: empFN,
+			},
+		])
+		.then(function (answer) {
+			const query = `
+			SELECT last_name 
+    		FROM employee
+   			WHERE first_name = ?`;
+
+			connection.query(query, [answer.first_name], function (err, res) {
+				let firstNameRemove = answer.first_name;
+				inquirer
+					.prompt([
+						{
+							name: 'last_name',
+							type: 'list',
+							message: 'Enter the Last Name of the Employee you want to remove:',
+							choices: function () {
+								let lastNameArray = [];
+								for (let i = 0; i < res.length; i++) {
+									lastNameArray.push(res[i].last_name);
+								}
+								return lastNameArray;
+							},
+						},
+					])
+					.then(function (answer) {
+						const query = `
+						SELECT id 
+    					FROM employee
+   						WHERE first_name = ? AND last_name = ?`;
+
+						connection.query(query, [firstNameRemove, answer.last_name], function (err, res) {
+							let lastNameRemove = answer.last_name;
+							inquirer
+								.prompt([
+									{
+										name: 'id',
+										type: 'list',
+										message: 'Enter the Employee ID of the Employee you want to remove:',
+										choices: function () {
+											let empID = [];
+											for (let m = 0; m < res.length; m++) {
+												empID.push(res[m].id);
+											}
+											return empID;
+										},
+									},
+								])
+								.then(function (answer) {
+									let employeeIDRemove = answer.id;
+									console.log(
+										chalk.yellowBright(`-------------------------------------------------------------------------------------------------
+			The Employee to be removed you entered is:
+			First Name ${firstNameRemove} | Last Name ${lastNameRemove} | Employee ID ${employeeIDRemove}
+			-------------------------------------------------------------------------------------------------`)
+									);
+									inquirer
+										.prompt([
+											{
+												name: 'ensureRemove',
+												type: 'list',
+												message: `Please confirm removal of employee: ${firstNameRemove} ${lastNameRemove}, ID#: ${employeeIDRemove} by choosing YES or NO. (All records for this employee will be purged!)`,
+												choices: ['YES', 'NO'],
+											},
+										])
+										.then(function (answer) {
+											if (answer.ensureRemove === 'YES') {
+												//
+												console.log(
+													chalk.redBright(`-------------------------------------------------------------------------------------------------
+			Employee: ${firstNameRemove} ${lastNameRemove}, ID#: ${employeeIDRemove} has been successfully removed from DNB Org''s Employee Content Management System!
+			-------------------------------------------------------------------------------------------------`)
+												);
+												//* SQL command to remove user
+												connection.query(
+													'DELETE FROM employee WHERE first_name = ? AND last_name = ? AND id = ?',
+													[firstNameRemove, lastNameRemove, employeeIDRemove],
+
+													function (err, res) {
+														if (err) throw err;
+														reRun();
+													}
+												);
+											} else {
+												console.log(
+													chalk.blueBright(`
+			-------------------------------------------------------------------------------------------------
+			Your action to removal employee ${firstNameRemove} ${lastNameRemove}, ID#: ${employeeIDRemove} has been aborted!
+			-------------------------------------------------------------------------------------------------
+												
+												`)
+												);
+												//*If No, Calls ReRun function to Ask if They Want to Leave The Program or Go To Main Menu
+												reRun();
+											}
+										});
+
+									//
+								});
+						});
+					});
+			});
+		});
+}
+
+//*Update Employee Role
+function updateEmpRole() {
+	inquirer
+		.prompt([
+			{
+				name: 'first_name',
+				type: 'list',
+				message: 'Which Employees role would you like to update?',
+				choices: empFN,
+			},
+		])
+		.then(function (answer) {
+			const query = `
+			SELECT last_name 
+    		FROM employee
+   			WHERE first_name = ?`;
+
+			connection.query(query, [answer.first_name], function (err, res) {
+				let firstNameRoleUpdate = answer.first_name;
+				inquirer
+					.prompt([
+						{
+							name: 'last_name',
+							type: 'list',
+							message: 'Enter the Last Name of the Employee whose role you want to update:',
+							choices: function () {
+								let lastNameArray = [];
+								for (let i = 0; i < res.length; i++) {
+									lastNameArray.push(res[i].last_name);
+								}
+								return lastNameArray;
+							},
+						},
+					])
+					.then(function (answer) {
+						let lastNameRoleUpdate = answer.last_name;
+						const query = `
+						SELECT id 
+    					FROM employee
+   						WHERE first_name = ? AND last_name = ?`;
+
+						connection.query(query, [firstNameRoleUpdate, lastNameRoleUpdate], function (err, res) {
+							inquirer
+								.prompt([
+									{
+										name: 'id',
+										type: 'list',
+										message: 'Enter the Employee ID of the Employee whose role you want to update:',
+										choices: function () {
+											let empID = [];
+											for (let m = 0; m < res.length; m++) {
+												empID.push(res[m].id);
+											}
+											return empID;
+										},
+									},
+								])
+								.then(function (answer) {
+									let employeeIDRoleUpdate = answer.id;
+									inquirer
+										.prompt([
+											{
+												name: 'role_title',
+												type: 'list',
+												message: 'Enter a new role for the Employee from the allowed list of existing roles at DNB Org:',
+												choices: roles,
+											},
+										])
+										.then(function (answer) {
+											let newTitleRoleUpdate = answer.role_title;
+
+											function FindNewRoleID() {
+												for (let q = 0; q < roleID.length; q++) {
+													if (roleID[q].title === answer.role_title) {
+														return roleID[q].id;
+													}
+												}
+											}
+
+											let updateRoleID = FindNewRoleID();
+
+											console.log(
+												chalk.yellowBright(`
+			-------------------------------------------------------------------------------------------------
+			The New Role Title: ${newTitleRoleUpdate} for Employee
+			First Name: ${firstNameRoleUpdate} | Last Name: ${lastNameRoleUpdate} has been successfully updated!
+			-------------------------------------------------------------------------------------------------
+						`)
+											);
+											inquirer
+												.prompt([
+													{
+														name: 'ensureRemove',
+														type: 'list',
+														message: `Please confirm you would like to update the New Role Title of : ${newTitleRoleUpdate} for Employee: ${firstNameRoleUpdate} ${lastNameRoleUpdate}? Choose  Yes or No`,
+														choices: ['YES', 'NO'],
+													},
+												])
+												.then(function (answer) {
+													if (answer.ensureRemove === 'YES') {
+														//
+														console.log(
+															chalk.greenBright(`
+			-------------------------------------------------------------------------------------------------
+			Employee: ${firstNameRoleUpdate} ${lastNameRoleUpdate}'s new role title: ${newTitleRoleUpdate} has been successfully updated at DNB Org!
+			-------------------------------------------------------------------------------------------------
+								
+								`)
+														);
+														//* SQL command to remove user
+														connection.query(
+															'UPDATE employee SET role_id = ? WHERE first_name = ? AND last_name = ? AND id = ?',
+															[updateRoleID, firstNameRoleUpdate, lastNameRoleUpdate, employeeIDRoleUpdate],
+
+															function (err, res) {
+																if (err) throw err;
+
+																console.log(
+																	chalk.cyanBright(`
+			
+			------------------------------------------------------------------------------------------------- Don't Forget To update the manager for Employee: ${firstNameRoleUpdate} ${lastNameRoleUpdate}
+			-------------------------------------------------------------------------------------------------
+								
+								`)
+																);
+
+																reRun();
+															}
+														);
+													} else {
+														console.log(
+															chalk.redBright(`
+			
+			-------------------------------------------------------------------------------------------------
+			You have chosen to abort an update to Employee ${firstNameRoleUpdate} ${lastNameRoleUpdate}'s role!
+			-------------------------------------------------------------------------------------------------
+								
+								`)
+														);
+														//*If No, Calls ReRun function to Ask if They Want to Leave The Program or Go To Main Menu
+														reRun();
+													}
+												});
+											//
+										});
+								});
+						});
+					});
+			});
+		});
+}
+
+//*Update Employee Manager
+function updateEmpMgr() {
+	//
+	inquirer
+		.prompt([
+			{
+				name: 'first_name',
+				type: 'list',
+				message: 'Enter the First Name of the Employee whose manager you want to update:',
+				choices: empFN,
+			},
+		])
+		.then(function (answer) {
+			const query = `
+			SELECT last_name 
+    		FROM employee
+   			WHERE first_name = ?`;
+
+			connection.query(query, [answer.first_name], function (err, res) {
+				let firstNameManagerUpdate = answer.first_name;
+				inquirer
+					.prompt([
+						{
+							name: 'last_name',
+							type: 'list',
+							message: 'Enter the Last Name of the Employee whose manager you want to update:',
+							choices: function () {
+								let lastNameArray = [];
+								for (let i = 0; i < res.length; i++) {
+									lastNameArray.push(res[i].last_name);
+								}
+								return lastNameArray;
+							},
+						},
+					])
+					.then(function (answer) {
+						let lastNameManagerUpdate = answer.last_name;
+						const query = `
+						SELECT id 
+    					FROM employee
+   						WHERE first_name = ? AND last_name = ?`;
+
+						connection.query(query, [firstNameManagerUpdate, lastNameManagerUpdate], function (err, res) {
+							inquirer
+								.prompt([
+									{
+										name: 'id',
+										type: 'list',
+										message: 'Enter the Employee ID of the Employee whose manager you want to update:',
+										choices: function () {
+											let empID = [];
+											for (let m = 0; m < res.length; m++) {
+												empID.push(res[m].id);
+											}
+											return empID;
+										},
+									},
+								])
+								.then(function (answer) {
+									let employeeIDManagerUpdate = answer.id;
+									inquirer
+										.prompt([
+											{
+												name: 'manager_name',
+												type: 'list',
+												message: 'Choose a new Manager from the existing list of Managers for the employee',
+												choices: managers,
+											},
+										])
+										.then(function (answer) {
+											let newManagerUpdate = answer.manager_name || null;
+
+											function FindNewManagerID() {
+												for (let q = 0; q < managerID.length; q++) {
+													if (managerID[q].manager_name === answer.manager_name) {
+														return managerID[q].manager_id;
+													}
+												}
+											}
+
+											let updateManagerID = FindNewManagerID();
+
+											console.log(
+												chalk.yellowBright(`
+			
+			-------------------------------------------------------------------------------------------------
+			Employee ${firstNameManagerUpdate} ${lastNameManagerUpdate}'s new manager ${newManagerUpdate} has been successfully updated in DNB Org's records!
+			-------------------------------------------------------------------------------------------------
+						
+						`)
+											);
+											inquirer
+												.prompt([
+													{
+														name: 'ensureRemove',
+														type: 'list',
+														message: `Please confirm the Employee : ${firstNameManagerUpdate} ${lastNameManagerUpdate}'s New Manager name is: ${newManagerUpdate} by selecting Yes or No`,
+														choices: ['YES', 'NO'],
+													},
+												])
+												.then(function (answer) {
+													if (answer.ensureRemove === 'YES') {
+														//
+														console.log(
+															chalk.greenBright(`
+			-------------------------------------------------------------------------------------------------
+			Employee: ${firstNameManagerUpdate} ${lastNameManagerUpdate}'s New Manager is now: ${newManagerUpdate} 
+			-------------------------------------------------------------------------------------------------
+								
+								`)
+														);
+														//* SQL command to update user
+														connection.query(
+															'UPDATE employee SET manager_id = ? WHERE first_name = ? AND last_name = ? AND id = ?',
+															[updateManagerID, firstNameManagerUpdate, lastNameManagerUpdate, employeeIDManagerUpdate],
+
+															function (err, res) {
+																if (err) throw err;
+
+																console.log(
+																	chalk.cyanBright(`
+			
+			-------------------------------------------------------------------------------------------------
+			Don't forget to update Employee: ${firstNameManagerUpdate} ${lastNameManagerUpdate}'s role given the new Manager update.
+			-------------------------------------------------------------------------------------------------
+								
+								`)
+																);
+
+																reRun();
+															}
+														);
+													} else {
+														console.log(
+															chalk.blueBright(`
+			
+			-------------------------------------------------------------------------------------------------
+			You have chosen to abort an update to Employee ${firstNameRoleUpdate} ${lastNameRoleUpdate}'s manager field!
+			-------------------------------------------------------------------------------------------------
+								
+								`)
+														);
+														//*If No, Calls ReRun function to Ask if They Want to Leave The Program or Go To Main Menu
+														reRun();
+													}
+												});
+											//
+										});
+								});
+						});
+					});
+			});
+		});
+}
+
+//*View All Roles
+function viewAllRoles() {
+	//
+	const query = `
+    SELECT * FROM role`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		console.table(res);
+
+		reRun();
+	});
+}
+
+//*Add Role
+function addRole() {
+	inquirer
+		.prompt([
+			{
+				name: 'newRole',
+				type: 'input',
+				message: 'Enter a new role job title:',
+			},
+			{
+				name: 'newRoleSalary',
+				type: 'number',
+				message: 'Enter a new salary for this new role',
+			},
+		])
+		.then(function (answer) {
+			//*Need to add role name and then find length of role array to add ID #
+			let newRoleName = answer.newRole;
+			let newRoleSalary = answer.newRoleSalary;
+			let newRoleID = roles.length + 1;
+
+			//* Take information and build new role constructor
+			console.log(
+				chalk.greenBright(`
+			-------------------------------------------------------------------------------------------------
+			Successfully added new role with a title of: ${newRoleName} & a role salary of ${newRoleSalary} corresponding to Role ID ${newRoleID}!
+			-------------------------------------------------------------------------------------------------
+			`)
+			);
+			//still not working
+			let addNewRole = new role(newRoleName, newRoleSalary, newRoleID);
+			connection.query('INSERT INTO role SET ?', addNewRole, function (err, res) {
+				if (err) throw err;
+			});
+			reRun();
+		});
+}
+
+//*Remove Role
+function removeRole() {
+	//
+	inquirer
+		.prompt([
+			{
+				name: 'removeRole',
+				type: 'list',
+				message: 'What Role Do You Want To Remove?',
+				choices: roles,
+			},
+		])
+		.then(function (answer) {
+			connection.query('DELETE FROM role WHERE title = ?', [answer.removeRole], function (err, res) {
+				if (err) throw err;
+				console.log(
+					chalk.greenBright(`
+			-------------------------------------------------------------------------------------------------
+			The role: ${answer.removeRole} was successfully removed from DNB Org DB!
+			-------------------------------------------------------------------------------------------------
+				`)
+				);
+			});
+			reRun();
+		});
+}
+
+//*View All Departments
+function viewAllDepts() {
+	const query = `
+    SELECT * FROM department`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		console.table(res);
+
+		reRun();
+	});
+}
+
+//*Add Department
+function addDept() {
+	inquirer
+		.prompt([
+			{
+				name: 'newDept',
+				type: 'input',
+				message: 'Enter a new name for this Department?',
+			},
+		])
+		.then(function (answer) {
+			//*Need to add role name and then find length of role array to add ID #
+			let newDeptName = answer.newDept;
+			let newDeptID = departments.length + 1;
+
+			//* Take information and build new role constructor
+			console.log(
+				chalk.greenBright(`
+			-------------------------------------------------------------------------------------------------
+			Successfully added New Department with a Department Name: ${newDeptName} & a corresponding Department ID of : ${newDeptID}!
+			-------------------------------------------------------------------------------------------------
+			`)
+			);
+						//still not working
+			let addNewDept = new department(newDeptName, newDeptID);
+			connection.query('INSERT INTO department SET ?', addNewDept, function (err, res) {
+				if (err) throw err;
+			});
+			reRun();
+		});
+}
+
+//*Remove Department
+function removeDept() {
+	//
+	inquirer
+		.prompt([
+			{
+				name: 'removeDept',
+				type: 'list',
+				message: 'Enter the name of the Department you would like to purge',
+				choices: departments,
+			},
+		])
+		.then(function (answer) {
+			connection.query('DELETE FROM department WHERE name = ?', [answer.removeDept], function (err, res) {
+				if (err) throw err;
+				console.log(
+					chalk.greenBright(`
+			-------------------------------------------------------------------------------------------------
+			Department by the name of ${answer.removeDept} has been successfully removed from the DB
+			-------------------------------------------------------------------------------------------------
+				`)
+				);
+			});
+			reRun();
+		});
+}
+
+function viewBudget() {
+	inquirer
+		.prompt({
+			name: 'deptChoice',
+			type: 'list',
+			message: 'Choose a Department whose Utilization Budget you would like to view:',
+			choices: departments,
+		})
+		.then(function (answer) {
+			const query = `
+			SELECT d.name AS Department_Name, SUM(r.salary) AS Total_Budget
+            FROM employee e
+            LEFT JOIN role r
+            ON e.role_id = r.id
+            LEFT JOIN department d
+            ON d.id = r.department_id
+            GROUP BY d.name
+            HAVING d.name = ?`;
+			connection.query(query, [answer.deptChoice], function (err, res) {
+				if (err) throw err;
+				//Adds space between the console table
+				console.log(`
+		
+					`);
+				console.table(res);
+				reRun();
+			});
+		});
+}
+
+//*Exit 
+function exit() {
+    console.log(chalk.black.bgCyan("\n Bye! You have successfully exited DNB's Employee Content Management System!!\n"));
+
+	connection.end();
+}
+
+// catch all errors
+connection.connect(function (err) {
+	if (err) throw err;
+	begin();
+	createManagers();
+	createRoles();
+	createDepts();
+	createEmpID();
+	createEmpFN();
+	ManagerWithID();
+	RoleWithID();
+});
