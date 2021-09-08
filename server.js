@@ -26,7 +26,7 @@ const connection = mysql.createConnection({
 	database: 'dnb_empDB',
 });
 
-
+// referenced https://github.com/JeffQuit/MySQL---Employee-Tracker-CLI 
 //*Starter Menu Qns presented by inquirer
 const menuOptions = [{
 	type: 'list',
@@ -51,7 +51,7 @@ const menuOptions = [{
 	],
 }];
 
-//* function to start the program, prints app header and has intro inquirer prompt
+// function to begin program and welcome users and present them with a menu of options to perform db operations
 function begin() {
 	console.log(chalk.black.bgCyan("\n Welcome to DNB Org's Employee Content Management System!\n"));
 	inquirer.prompt(menuOptions).then(function (data) {
@@ -96,7 +96,7 @@ function reRun() {
 		.prompt({
 			name: 'rerun',
 			type: 'list',
-			message: 'Want to return to the Main Menu or Exit?',
+			message: 'Do you want to return to the Main Menu or Exit?',
 			choices: ['Return To Main Menu', 'Exit'],
 		})
 		.then(function (data) {
@@ -109,52 +109,15 @@ function reRun() {
 		});
 }
 
-//* Builds array for Manager Names
-function createManagers() {
-	const query = `
-    SELECT DISTINCT x.id, CONCAT(x.first_name, " ", x.last_name) 
-    AS manager_name 
-    FROM employee e 
-    INNER JOIN employee x 
-    ON e.manager_id = x.id`;
+//exit prompt logic 
+function exit() {
+	console.log(chalk.black.bgCyan("\n Bye! You have successfully exited DNB's Employee Content Management System!!\n"));
 
-	connection.query(query, function (err, res) {
-		if (err) throw err;
-		for (let i = 0; i < res.length; i++) {
-			managers.push(res[i].manager_name);
-		}
-		managers.push('null'); //Adds Null At the end of the array since not all new employees have managers
-	});
+	connection.end();
 }
 
-//* Builds array for Job Title Names
-function createRoles() {
-	const query = `
-    SELECT id, title 
-    FROM role;`;
 
-	connection.query(query, function (err, res) {
-		if (err) throw err;
-		for (let i = 0; i < res.length; i++) {
-			roles.push(res[i].title);
-		}
-	});
-}
-
-//* Builds array for Job Title Names
-function createDepts() {
-	const query = `
-    SELECT id, name 
-    FROM department;`;
-
-	connection.query(query, function (err, res) {
-		if (err) throw err;
-		for (let i = 0; i < res.length; i++) {
-			dept.push(res[i].name);
-		}
-	});
-}
-
+//employee id  function
 function createEmpID() {
 	const query = `
     SELECT id
@@ -168,6 +131,7 @@ function createEmpID() {
 	});
 }
 
+//employee firstname
 function createEmpFN() {
 	const query = `
     SELECT first_name
@@ -181,6 +145,68 @@ function createEmpFN() {
 	});
 }
 
+
+// roles 
+function createRoles() {
+	const query = `
+    SELECT id, title 
+    FROM role;`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			roles.push(res[i].title);
+		}
+	});
+}
+
+//manager
+function createManagers() {
+	const query = `
+    SELECT DISTINCT x.id, CONCAT(x.first_name, " ", x.last_name) 
+    AS manager_name 
+    FROM employee e 
+    INNER JOIN employee x 
+    ON e.manager_id = x.id`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			managers.push(res[i].manager_name);
+		}
+		managers.push('null'); //Adds Null to the end
+	});
+}
+// department 
+function createDepts() {
+	const query = `
+    SELECT id, name 
+    FROM department;`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			dept.push(res[i].name);
+		}
+	});
+}
+
+
+//creating another column to map roles and id
+function RoleWithID() {
+	const query = `
+    SELECT id, title 
+    FROM role;`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		for (let i = 0; i < res.length; i++) {
+			roleID.push(res[i]);
+		}
+	});
+}
+
+//creating another column to map managers and id
 function ManagerWithID() {
 	const query = `
     SELECT DISTINCT CONCAT(x.first_name, " ", x.last_name) AS manager_name, x.id AS manager_id 
@@ -197,120 +223,66 @@ function ManagerWithID() {
 	});
 }
 
-function RoleWithID() {
-	const query = `
-    SELECT id, title 
-    FROM role;`;
 
-	connection.query(query, function (err, res) {
-		if (err) throw err;
-		for (let i = 0; i < res.length; i++) {
-			roleID.push(res[i]);
-		}
-	});
-}
+//add a role
+function addRole() {
+	inquirer
+		.prompt([{
+				name: 'newRole',
+				type: 'input',
+				message: 'Enter a new role job title:',
+			},
+			{
+				name: 'newRoleSalary',
+				type: 'number',
+				message: 'Enter a new salary for this new role',
+			},
+		])
+		.then(function (answer) {
+			//*Need to add role name and then find length of role array to add ID #
+			let newRoleName = answer.newRole;
+			let newRoleSalary = answer.newRoleSalary;
+			let newRoleID = roles.length + 1;
 
-//* Function to view everything in DB
-function viewAllEmps() {
-	//
-	const query = `
-    SELECT e.id AS employee_id, e.first_name, e.last_name, d.name AS department_name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name 
-    FROM employee e
-    LEFT JOIN role r
-    ON e.role_id = r.id
-    LEFT JOIN department d
-    ON d.id = r.department_id
-    LEFT JOIN employee x
-    ON e.manager_id = x.id`;
-
-	connection.query(query, function (err, res) {
-		if (err) throw err;
-		//Adds space between the console table
-		console.log(`
-		
-		`);
-		console.table(res);
-
-		reRun();
-	});
-}
-
-function viewAllEmpsByDept() {
-	//
-	const query = 'SELECT name FROM department';
-	connection.query(query, function (err, res) {
-		if (err) throw err;
-		inquirer
-			.prompt({
-				name: 'deptChoice',
-				type: 'list',
-				message: 'Choose a Department of whose  Employees you would like to view: ',
-				choices: dept,
-			})
-			.then(function (answer) {
-				const query2 = `
-                    SELECT e.id AS employee_id, e.first_name, e.last_name, d.name AS department_name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name 
-                    FROM employee e
-                    LEFT JOIN role r
-                    ON e.role_id = r.id
-                    LEFT JOIN department d
-                    ON d.id = r.department_id
-                    LEFT JOIN employee x
-                    ON e.manager_id = x.id
-                    WHERE name = ?`;
-				connection.query(query2, [answer.deptChoice], function (err, res) {
-					if (err) throw err;
-					//Adds space between the console table
-					console.log(`	`);
-					console.table(res);
-					reRun();
-				});
+			//* Take information and build new role constructor
+			console.log(chalk.greenBright(`-------------------------------------------------------------------------------------------------
+			Successfully added new role with a title of: ${newRoleName} & a role salary of ${newRoleSalary} corresponding to Role ID ${newRoleID}!
+			-------------------------------------------------------------------------------------------------`));
+			let addNewRole = new role(newRoleName, newRoleSalary, newRoleID);
+			connection.query('INSERT INTO role SET ?', addNewRole, function (err, res) {
+				if (err) throw err;
 			});
-	});
+			reRun();
+		});
 }
 
-//* View All Employees By Manager
+// add a Department
+function addDept() {
+	inquirer
+		.prompt([{
+			name: 'newDept',
+			type: 'input',
+			message: 'Enter a new name for this Department?',
+		}, ])
+		.then(function (answer) {
+			//*Need to add role name and then find length of role array to add ID #
+			let newDeptName = answer.newDept;
+			let newDeptID = dept.length + 1;
 
-function viewAllEmpsByMgr() {
-	//SELECT * FROM employee WHERE manager_id IS NOT NULL;
-	const query = `
-    SELECT DISTINCT CONCAT(x.first_name, " ", x.last_name) AS manager_name 
-    FROM employee e
-    INNER JOIN employee x
-    ON e.manager_id = x.id
-    `;
-	connection.query(query, function (err, res) {
-		if (err) throw err;
-		inquirer
-			.prompt({
-				name: 'managerChoices',
-				type: 'list',
-				message: 'Choose a Manager whose Employees you would like to view',
-				choices: managers,
-			})
-			.then(function (answer) {
-				const query2 = `
-                    SELECT e.id AS employee_id, e.first_name, e.last_name, d.name AS department_name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name 
-                    FROM employee e
-                    LEFT JOIN role r
-                    ON e.role_id = r.id
-                    LEFT JOIN department d
-                    ON d.id = r.department_id
-                    LEFT JOIN employee x
-                    ON e.manager_id = x.id
-                    HAVING manager_name = ?`;
-				connection.query(query2, [answer.managerChoices], function (err, res) {
-					if (err) throw err;
-					//Adds space between the console table
-					console.log(`	`);
-					console.table(res);
-					reRun();
-				});
+			//* Take information and build new role constructor
+			console.log(chalk.greenBright(`-------------------------------------------------------------------------------------------------
+			Successfully added New Department with a Department Name: ${newDeptName} & a corresponding Department ID of : ${newDeptID}!
+			-------------------------------------------------------------------------------------------------`));
+			let addNewDept = new department(newDeptName, newDeptID);
+			connection.query('INSERT INTO department SET ?', addNewDept, function (err, res) {
+				if (err) throw err;
 			});
-	});
+			reRun();
+		});
 }
 
-//* Add Employee
+
+// Add an Employee
 function addEmp() {
 	inquirer
 		.prompt([{
@@ -323,7 +295,7 @@ function addEmp() {
 						return true;
 					} else {
 						console.log(
-							chalk.redBright(`Invalid Submission. Please Choose a valid letter from A-Z or a-z! You may delete your invalid submission and resubmit a new entry!`)
+							chalk.redBright(`Invalid Submission. Please choose a valid letter from A-Z or a-z! You may delete your invalid submission and resubmit a new entry!`)
 						);
 						return false;
 					}
@@ -363,7 +335,7 @@ function addEmp() {
 			let employeeFirstName = answer.first_name;
 			let employeeLastName = answer.last_name;
 
-			//*Loop through Role Array to find matching id
+			//find matching id roles
 			function FindRoleID() {
 				for (let p = 0; p < roleID.length; p++) {
 					if (roleID[p].title === answer.role) {
@@ -371,7 +343,7 @@ function addEmp() {
 					}
 				}
 			}
-			//*Loop through Manager Array to find matching id
+			//find matching id managers
 			function FindManagerID() {
 				for (let q = 0; q < managerID.length; q++) {
 					if (managerID[q].manager_name === answer.manager) {
@@ -395,102 +367,7 @@ function addEmp() {
 		});
 }
 
-//*Remove Employee
-function removeEmp() {
-	inquirer
-		.prompt([{
-			name: 'first_name',
-			type: 'list',
-			message: 'Enter the First Name of the Employee you want to remove:',
-			choices: empFN,
-		}, ])
-		.then(function (answer) {
-			const query = `
-			SELECT last_name 
-    		FROM employee
-   			WHERE first_name = ?`;
-
-			connection.query(query, [answer.first_name], function (err, res) {
-				let firstNameRemove = answer.first_name;
-				inquirer
-					.prompt([{
-						name: 'last_name',
-						type: 'list',
-						message: 'Enter the Last Name of the Employee you want to remove:',
-						choices: function () {
-							let lastNameArray = [];
-							for (let i = 0; i < res.length; i++) {
-								lastNameArray.push(res[i].last_name);
-							}
-							return lastNameArray;
-						},
-					}, ])
-					.then(function (answer) {
-						const query = `
-						SELECT id 
-    					FROM employee
-   						WHERE first_name = ? AND last_name = ?`;
-
-						connection.query(query, [firstNameRemove, answer.last_name], function (err, res) {
-							let lastNameRemove = answer.last_name;
-							inquirer
-								.prompt([{
-									name: 'id',
-									type: 'list',
-									message: 'Enter the Employee ID of the Employee you want to remove:',
-									choices: function () {
-										let empID = [];
-										for (let m = 0; m < res.length; m++) {
-											empID.push(res[m].id);
-										}
-										return empID;
-									},
-								}, ])
-								.then(function (answer) {
-									let employeeIDRemove = answer.id;
-									console.log(chalk.yellowBright(`-------------------------------------------------------------------------------------------------
-			The Employee to be removed you entered is: First Name ${firstNameRemove} | Last Name ${lastNameRemove} | Employee ID ${employeeIDRemove}
-			-------------------------------------------------------------------------------------------------`));
-									inquirer
-										.prompt([{
-											name: 'ensureRemove',
-											type: 'list',
-											message: `Please confirm removal of employee: ${firstNameRemove} ${lastNameRemove}, ID#: ${employeeIDRemove} by choosing YES or NO. (All records for this employee will be purged!)`,
-											choices: ['YES', 'NO'],
-										}, ])
-										.then(function (answer) {
-											if (answer.ensureRemove === 'YES') {
-												console.log(chalk.redBright(`-------------------------------------------------------------------------------------------------
-			Employee: ${firstNameRemove} ${lastNameRemove}, ID#: ${employeeIDRemove} has been successfully removed from DNB Org''s Employee Content Management System!
-			-------------------------------------------------------------------------------------------------`));
-												//* SQL command to remove user
-												connection.query(
-													'DELETE FROM employee WHERE first_name = ? AND last_name = ? AND id = ?',
-													[firstNameRemove, lastNameRemove, employeeIDRemove],
-
-													function (err, res) {
-														if (err) throw err;
-														reRun();
-													}
-												);
-											} else {
-												console.log(chalk.blueBright(`-------------------------------------------------------------------------------------------------
-			Your action to removal employee ${firstNameRemove} ${lastNameRemove}, ID#: ${employeeIDRemove} has been aborted!
-			-------------------------------------------------------------------------------------------------`));
-												//*If No, Calls ReRun function to Ask if They Want to Leave The Program or Go To Main Menu
-												reRun();
-											}
-										});
-
-									//
-								});
-						});
-					});
-			});
-		});
-}
-
-//*Update Employee Role
+//Update an Employee's Role
 function updateEmpRole() {
 	inquirer
 		.prompt([{
@@ -611,7 +488,7 @@ function updateEmpRole() {
 		});
 }
 
-//*Update Employee Manager
+//Update an Employee's Manager
 function updateEmpMgr() {
 	//
 	inquirer
@@ -733,7 +610,7 @@ function updateEmpMgr() {
 		});
 }
 
-//*View All Roles
+//view all Roles
 function viewAllRoles() {
 	//
 	const query = `
@@ -747,39 +624,117 @@ function viewAllRoles() {
 	});
 }
 
-//*Add Role
-function addRole() {
-	inquirer
-		.prompt([{
-				name: 'newRole',
-				type: 'input',
-				message: 'Enter a new role job title:',
-			},
-			{
-				name: 'newRoleSalary',
-				type: 'number',
-				message: 'Enter a new salary for this new role',
-			},
-		])
-		.then(function (answer) {
-			//*Need to add role name and then find length of role array to add ID #
-			let newRoleName = answer.newRole;
-			let newRoleSalary = answer.newRoleSalary;
-			let newRoleID = roles.length + 1;
 
-			//* Take information and build new role constructor
-			console.log(chalk.greenBright(`-------------------------------------------------------------------------------------------------
-			Successfully added new role with a title of: ${newRoleName} & a role salary of ${newRoleSalary} corresponding to Role ID ${newRoleID}!
-			-------------------------------------------------------------------------------------------------`));
-			let addNewRole = new role(newRoleName, newRoleSalary, newRoleID);
-			connection.query('INSERT INTO role SET ?', addNewRole, function (err, res) {
-				if (err) throw err;
-			});
-			reRun();
-		});
+//function to view all employees in the db
+function viewAllEmps() {
+	//
+	const query = `
+    SELECT e.id AS employee_id, e.first_name, e.last_name, d.name AS department_name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name 
+    FROM employee e
+    LEFT JOIN role r
+    ON e.role_id = r.id
+    LEFT JOIN department d
+    ON d.id = r.department_id
+    LEFT JOIN employee x
+    ON e.manager_id = x.id`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		//Adds space between the console table
+		console.log(` `);
+		console.table(res);
+		reRun();
+	});
 }
 
-//*Remove Role
+// to view employees by departments
+function viewAllEmpsByDept() {
+	//
+	const query = 'SELECT name FROM department';
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		inquirer
+			.prompt({
+				name: 'deptChoice',
+				type: 'list',
+				message: 'Choose a Department of whose Employees you would like to view: ',
+				choices: dept,
+			})
+			.then(function (answer) {
+				const query2 = `
+                    SELECT e.id AS employee_id, e.first_name, e.last_name, d.name AS department_name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name 
+                    FROM employee e
+                    LEFT JOIN role r
+                    ON e.role_id = r.id
+                    LEFT JOIN department d
+                    ON d.id = r.department_id
+                    LEFT JOIN employee x
+                    ON e.manager_id = x.id
+                    WHERE name = ?`;
+				connection.query(query2, [answer.deptChoice], function (err, res) {
+					if (err) throw err;
+					//Adds space between the console table
+					console.log(`	`);
+					console.table(res);
+					reRun();
+				});
+			});
+	});
+}
+
+//view all Departments
+function viewAllDepts() {
+	const query = `
+    SELECT * FROM department`;
+
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		console.table(res);
+
+		reRun();
+	});
+}
+
+// Viewing All Employees By their respective Manager
+function viewAllEmpsByMgr() {
+	//SELECT * FROM employee WHERE manager_id IS NOT NULL;
+	const query = `
+    SELECT DISTINCT CONCAT(x.first_name, " ", x.last_name) AS manager_name 
+    FROM employee e
+    INNER JOIN employee x
+    ON e.manager_id = x.id`;
+	connection.query(query, function (err, res) {
+		if (err) throw err;
+		inquirer
+			.prompt({
+				name: 'managerChoices',
+				type: 'list',
+				message: 'Choose a Manager whose Employees you would like to view',
+				choices: managers,
+			})
+			.then(function (answer) {
+				const query2 = `
+                    SELECT e.id AS employee_id, e.first_name, e.last_name, d.name AS department_name, r.title AS job_title, r.salary, CONCAT(x.first_name, " ", x.last_name) AS manager_name 
+                    FROM employee e
+                    LEFT JOIN role r
+                    ON e.role_id = r.id
+                    LEFT JOIN department d
+                    ON d.id = r.department_id
+                    LEFT JOIN employee x
+                    ON e.manager_id = x.id
+                    HAVING manager_name = ?`;
+				connection.query(query2, [answer.managerChoices], function (err, res) {
+					if (err) throw err;
+					console.log(`	`);
+					console.table(res);
+					reRun();
+				});
+			});
+	});
+}
+
+
+//remove a Role
 function removeRole() {
 	//
 	inquirer
@@ -800,45 +755,104 @@ function removeRole() {
 		});
 }
 
-//*View All Departments
-function viewAllDepts() {
-	const query = `
-    SELECT * FROM department`;
 
-	connection.query(query, function (err, res) {
-		if (err) throw err;
-		console.table(res);
-
-		reRun();
-	});
-}
-
-//*Add Department
-function addDept() {
+//Remove an Employee
+function removeEmp() {
 	inquirer
 		.prompt([{
-			name: 'newDept',
-			type: 'input',
-			message: 'Enter a new name for this Department?',
+			name: 'first_name',
+			type: 'list',
+			message: 'Enter the First Name of the Employee you want to remove:',
+			choices: empFN,
 		}, ])
 		.then(function (answer) {
-			//*Need to add role name and then find length of role array to add ID #
-			let newDeptName = answer.newDept;
-			let newDeptID = dept.length + 1;
+			const query = `
+			SELECT last_name 
+    		FROM employee
+   			WHERE first_name = ?`;
 
-			//* Take information and build new role constructor
-			console.log(chalk.greenBright(`-------------------------------------------------------------------------------------------------
-			Successfully added New Department with a Department Name: ${newDeptName} & a corresponding Department ID of : ${newDeptID}!
+			connection.query(query, [answer.first_name], function (err, res) {
+				let firstNameRemove = answer.first_name;
+				inquirer
+					.prompt([{
+						name: 'last_name',
+						type: 'list',
+						message: 'Enter the Last Name of the Employee you want to remove:',
+						choices: function () {
+							let lastNameArray = [];
+							for (let i = 0; i < res.length; i++) {
+								lastNameArray.push(res[i].last_name);
+							}
+							return lastNameArray;
+						},
+					}, ])
+					.then(function (answer) {
+						const query = `
+						SELECT id 
+    					FROM employee
+   						WHERE first_name = ? AND last_name = ?`;
+
+						connection.query(query, [firstNameRemove, answer.last_name], function (err, res) {
+							let lastNameRemove = answer.last_name;
+							inquirer
+								.prompt([{
+									name: 'id',
+									type: 'list',
+									message: 'Enter the Employee ID of the Employee you want to remove:',
+									choices: function () {
+										let empID = [];
+										for (let m = 0; m < res.length; m++) {
+											empID.push(res[m].id);
+										}
+										return empID;
+									},
+								}, ])
+								.then(function (answer) {
+									let employeeIDRemove = answer.id;
+									console.log(chalk.yellowBright(`-------------------------------------------------------------------------------------------------
+			The Employee to be removed you entered is: First Name ${firstNameRemove} | Last Name ${lastNameRemove} | Employee ID ${employeeIDRemove}
 			-------------------------------------------------------------------------------------------------`));
-			let addNewDept = new department(newDeptName, newDeptID);
-			connection.query('INSERT INTO department SET ?', addNewDept, function (err, res) {
-				if (err) throw err;
+									inquirer
+										.prompt([{
+											name: 'ensureRemove',
+											type: 'list',
+											message: `Please confirm removal of employee: ${firstNameRemove} ${lastNameRemove}, ID#: ${employeeIDRemove} by choosing YES or NO. (All records for this employee will be purged!)`,
+											choices: ['YES', 'NO'],
+										}, ])
+										.then(function (answer) {
+											if (answer.ensureRemove === 'YES') {
+												console.log(chalk.redBright(`-------------------------------------------------------------------------------------------------
+			Employee: ${firstNameRemove} ${lastNameRemove}, ID#: ${employeeIDRemove} has been successfully removed from DNB Org''s Employee Content Management System!
+			-------------------------------------------------------------------------------------------------`));
+												// remove user query 
+												connection.query(
+													'DELETE FROM employee WHERE first_name = ? AND last_name = ? AND id = ?',
+													[firstNameRemove, lastNameRemove, employeeIDRemove],
+
+													function (err, res) {
+														if (err) throw err;
+														reRun();
+													}
+												);
+											} else {
+												console.log(chalk.blueBright(`-------------------------------------------------------------------------------------------------
+			Your action to removal employee ${firstNameRemove} ${lastNameRemove}, ID#: ${employeeIDRemove} has been aborted!
+			-------------------------------------------------------------------------------------------------`));
+												//*If No, Calls ReRun function to Ask if They Want to Leave The Program or Go To Main Menu
+												reRun();
+											}
+										});
+
+									//
+								});
+						});
+					});
 			});
-			reRun();
 		});
 }
 
-//*Remove Department
+
+//remove a  Department
 function removeDept() {
 	//
 	inquirer
@@ -859,6 +873,8 @@ function removeDept() {
 		});
 }
 
+
+// view all budget by department
 function viewBudget() {
 	inquirer
 		.prompt({
@@ -887,22 +903,15 @@ function viewBudget() {
 		});
 }
 
-//*Exit 
-function exit() {
-	console.log(chalk.black.bgCyan("\n Bye! You have successfully exited DNB's Employee Content Management System!!\n"));
-
-	connection.end();
-}
-
 // catch all errors
 connection.connect(function (err) {
 	if (err) throw err;
 	begin();
-	createManagers();
-	createRoles();
-	createDepts();
-	createEmpID();
-	createEmpFN();
 	ManagerWithID();
 	RoleWithID();
+	createManagers();
+	createEmpID();
+	createEmpFN()
+	createRoles();
+	createDepts();
 });
