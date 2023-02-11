@@ -17,7 +17,7 @@
     "inquirer": "^8.1.0",
     "dotenv": "^10.0.0",
     "express": "^4.16.4",
-    "nodemon": "^2.0.4"
+    "nodemon": "^2.0.20"
   },
   "repository": {
     "type": "git",
